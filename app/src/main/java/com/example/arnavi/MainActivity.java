@@ -17,6 +17,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.Sensor;
@@ -24,7 +25,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -51,20 +51,15 @@ import com.skt.tmap.TMapPoint;
 import com.skt.tmap.TMapView;
 import com.skt.tmap.overlay.TMapMarkerItem;
 import com.skt.tmap.poi.TMapPOIItem;
-import com.skt.tmap.TrackingThread;
 
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
-
-    private PermissionSupport permission;
 
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
@@ -118,8 +113,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        permissionCheck();
-
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -130,21 +123,19 @@ public class MainActivity extends AppCompatActivity {
 
         orientationView = findViewById(R.id.orientationView);
 
-        tMapView = new TMapView(this);
-
         manager = new TMapGpsManager(this);
 
         tmapdata = new TMapData();
 
+        tMapView = new TMapView(this);
         tMapView.setSKTMapApiKey("l7xx8c266dda82a64d19921918f0225c8193");
-
-        ConstraintLayout container = findViewById(R.id.Tmap);
-        container.addView(tMapView);
-
         tMapView.setOnMapReadyListener(() -> {
             //todo 맵 로딩 완료 후 구현
             setTracking(true);
         });
+
+        ConstraintLayout container = findViewById(R.id.Tmap);
+        container.addView(tMapView);
 
         ImageView locationImage = findViewById(R.id.locationImage);
         locationImage.setOnClickListener(view -> {
@@ -262,14 +253,10 @@ public class MainActivity extends AppCompatActivity {
 
         startPointText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
 
             @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
 
             @Override
             public void afterTextChanged(Editable editable) {
@@ -326,14 +313,10 @@ public class MainActivity extends AppCompatActivity {
 
         endPointText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
 
             @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
 
             @Override
             public void afterTextChanged(Editable editable) {
@@ -363,11 +346,21 @@ public class MainActivity extends AppCompatActivity {
                                         endPoint = poiItemList.get(i);
                                         endPointText.setText(endPoint.getPOIName());
                                         endPointText.clearFocus();
-                                        end = new TMapPoint(Double.parseDouble(endPoint.frontLat), Double.parseDouble(endPoint.frontLon));
                                         listView.setVisibility(View.GONE);
-                                        tMapView.removeAllTMapPOIItem();
+
                                         setTracking(false);
+
+                                        end = new TMapPoint(Double.parseDouble(endPoint.frontLat), Double.parseDouble(endPoint.frontLon));
+
+                                        tMapView.removeAllTMapPOIItem();
                                         tMapView.setLocationPoint(end.getLatitude(), end.getLongitude());
+                                        TMapMarkerItem endMarkerItem = new TMapMarkerItem();
+                                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.poi_dot);
+                                        endMarkerItem.setId("endMarker");
+                                        endMarkerItem.setIcon(bitmap);
+                                        endMarkerItem.setTMapPoint(end);
+                                        tMapView.addTMapMarkerItem(endMarkerItem);
+
                                         inputMethodManager.hideSoftInputFromWindow(endPointText.getWindowToken(), 0);
                                     });
                                 });
@@ -428,22 +421,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void permissionCheck() {
-        permission = new PermissionSupport(this, this);
-
-        if (!permission.checkPermission()) {
-            permission.requestPermission();
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        if (!permission.permissionResult(requestCode, permissions, grantResults)) {
-            permission.requestPermission();
-        }
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
 
     public void updateOrientationAngles() {
         // Update rotation matrix, which is needed to update orientation angles.
@@ -514,7 +491,7 @@ public class MainActivity extends AppCompatActivity {
 
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
-        Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner)this, cameraSelector, preview);
+        Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview);
     }
 
 

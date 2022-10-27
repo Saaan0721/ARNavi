@@ -7,37 +7,76 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <EditText
-        android:id="@+id/startPointText"
-        android:layout_width="0dp"
-        android:layout_height="50dp"
-        android:hint="출발지"
-        app:layout_constraintBottom_toTopOf="@+id/endPointText"
-        app:layout_constraintEnd_toStartOf="@+id/search_button"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-    </EditText>
+        <EditText
+            android:id="@+id/startPointText"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:hint="출발지"
+            app:layout_constraintEnd_toStartOf="@+id/search_button"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:inputType="text">
 
-    <EditText
-        android:id="@+id/endPointText"
-        android:layout_width="0dp"
-        android:layout_height="50dp"
-        android:hint="도착지"
-        app:layout_constraintEnd_toStartOf="@+id/search_button"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/startPointText">
+        </EditText>
 
-    </EditText>
+        <EditText
+            android:id="@+id/endPointText"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:hint="도착지"
+            app:layout_constraintTop_toBottomOf="@+id/startPointText"
+            app:layout_constraintEnd_toStartOf="@+id/search_button"
+            app:layout_constraintStart_toStartOf="parent"
+            android:inputType="text">
+
+        </EditText>
+
+        <Button
+            android:id="@+id/search_button"
+            android:layout_width="wrap_content"
+            android:layout_height="100dp"
+            android:text="길찾기"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/current_position_button"
+            android:layout_width="0dp"
+            android:layout_height="55dp"
+            android:text="내위치"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/search_button"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <ListView
+            android:id="@+id/listView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/search_button" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <FrameLayout
         android:id="@+id/container"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="0dp"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@+id/endPointText"
+        app:layout_constraintBottom_toTopOf="@+id/Tmap"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toBottomOf="@+id/topBar">
 
         <androidx.camera.view.PreviewView
             android:id="@+id/previewView"
@@ -51,37 +90,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:alpha="128"
             app:srcCompat="@drawable/location_marker" />
 
     </FrameLayout>
-
-    <Button
-        android:id="@+id/current_position_button"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="내위치"
-        android:visibility="gone"
-        app:layout_constraintEnd_toStartOf="@+id/search_button"
-        app:layout_constraintStart_toStartOf="@+id/endPointText"
-        app:layout_constraintTop_toBottomOf="@+id/startPointText" />
-
-    <ListView
-        android:id="@+id/listView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/container" />
-
-    <Button
-        android:id="@+id/search_button"
-        android:layout_width="wrap_content"
-        android:layout_height="100dp"
-        android:text="길찾기"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/Tmap"
@@ -89,10 +100,8 @@
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/listView"
-        app:layout_constraintVertical_bias="0.0">
+        app:layout_constraintTop_toBottomOf="@+id/container">
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
