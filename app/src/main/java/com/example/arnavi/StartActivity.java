@@ -8,6 +8,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
 
 import java.util.ArrayList;
 
@@ -48,11 +49,12 @@ public class StartActivity extends AppCompatActivity {
 
         String[] targets = new String[targetList.size()];
         targetList.toArray(targets);
+
         if (targets.length == 0) {
             startNextActivity();
+        } else {
+            ActivityCompat.requestPermissions(this, targets, 101);
         }
-
-        ActivityCompat.requestPermissions(this, targets, 101);
     }
 
     @Override
@@ -72,8 +74,10 @@ public class StartActivity extends AppCompatActivity {
     }
 
     public void startNextActivity() {
-        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-        startActivity(intent);
-        finish();
+        new Handler().postDelayed(() -> {
+            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            startActivity(intent);
+            finish();
+        }, 1000);
     }
 }

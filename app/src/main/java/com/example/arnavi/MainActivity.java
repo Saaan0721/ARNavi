@@ -143,166 +143,88 @@ public class MainActivity extends AppCompatActivity {
             setTracking(locationImage.isSelected());
         });
 
-        EditText startPointText = findViewById(R.id.startPointText);
         EditText endPointText = findViewById(R.id.endPointText);
-
-        Button currentPositionButton = findViewById(R.id.current_position_button);
 
         ListView listView = findViewById(R.id.listView);
 
-        Button searchButton = findViewById(R.id.search_button);
-
-        searchButton.setOnClickListener(view -> {
-            setTracking(true);
-            tMapView.removeAllTMapPOIItem();
-            tMapView.removeAllTMapOverlay();
-            listView.setVisibility(View.GONE);
-            inputMethodManager.hideSoftInputFromWindow(endPointText.getWindowToken(), 0);
-
-            if (start == null || end == null) {
-                return;
-            }
-
-            frameLayout.setVisibility(View.VISIBLE);
-
-            cameraProviderFuture = ProcessCameraProvider.getInstance(getApplicationContext());
-
-            cameraProviderFuture.addListener(() -> {
-                try {
-                    ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                    bindPreview(cameraProvider);
-                } catch (ExecutionException | InterruptedException e) {
-                    // No errors need to be handled for this Future.
-                    // This should never be reached.
-                }
-            }, ContextCompat.getMainExecutor(getApplicationContext()));
-
-            tmapdata.findPathDataWithType(TMapData.TMapPathType.PEDESTRIAN_PATH, start, end, tMapPolyLine -> {
-                tMapPolyLine.setLineWidth(3);
-                tMapPolyLine.setLineColor(Color.BLUE);
-                tMapPolyLine.setLineAlpha(255);
-
-                tMapPolyLine.setOutLineWidth(5);
-                tMapPolyLine.setOutLineColor(Color.RED);
-                tMapPolyLine.setOutLineAlpha(255);
-
-                tMapView.addTMapPolyLine(tMapPolyLine);
-                TMapInfo info = tMapView.getDisplayTMapInfo(tMapPolyLine.getLinePointList());
-                tMapView.setZoomLevel(info.getZoom());
-                tMapView.setCenterPoint(info.getPoint().getLatitude(), info.getPoint().getLongitude());
-
-                tMapView.setTMapPath(tMapPolyLine);
-            });
-
-            tmapdata.findPathDataAllType(TMapData.TMapPathType.PEDESTRIAN_PATH, start, end, document -> {
-                pointList.clear();
-                Element root = document.getDocumentElement();
-                NodeList nodeListPlacemark = root.getElementsByTagName("Placemark");
-                for( int i=0; i<nodeListPlacemark.getLength(); i++ ) {
-                    NodeList nodeListPlacemarkItem = nodeListPlacemark.item(i).getChildNodes();
-                    for( int j=0; j<nodeListPlacemarkItem.getLength(); j++ ) {
-                        if( nodeListPlacemarkItem.item(j).getNodeName().equals("Point") ) {
-                            NodeList nodeListPoint = nodeListPlacemarkItem.item(j).getChildNodes();
-                            for( int k=0; k<nodeListPoint.getLength(); k++) {
-                                if (nodeListPoint.item(k).getNodeName().equals("coordinates")) {
-                                    Log.d("tmap", nodeListPoint.item(k).getTextContent().trim());
-
-                                    String[] point = nodeListPoint.item(k).getTextContent().trim().split(",");
-                                    pointLat = Double.parseDouble(point[1]);
-                                    pointLon = Double.parseDouble(point[0]);
-
-                                    Log.d("tmap", "lat "+pointLat);
-                                    Log.d("tmap", "lon "+pointLon);
-
-                                    Location location = new Location("point");
-
-                                    location.setLatitude(pointLat);
-                                    location.setLongitude(pointLon);
-
-                                    pointList.add(location);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                isPathGuide = true;
-            });
-        });
-
-        startPointText.setOnTouchListener((view, motionEvent) -> {
-            if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
-                start = null;
-                setTracking(true);
-                currentPositionButton.setVisibility(View.VISIBLE);
-                currentPositionButton.setOnClickListener(view1 -> {
-                    start = tMapView.getCenterPoint();
-                    startPointText.setText("내위치");
-
-                    startPointText.clearFocus();
-
-                    tMapView.removeAllTMapPOIItem();
-
-                    currentPositionButton.setVisibility(View.GONE);
-                    listView.setVisibility(View.GONE);
-                    inputMethodManager.hideSoftInputFromWindow(startPointText.getWindowToken(), 0);
-                });
-            }
-            return false;
-        });
-
-        startPointText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-                String strData = startPointText.getText().toString();
-
-                tMapView.removeAllTMapPOIItem();
-
-                if(!strData.trim().isEmpty()) {
-                    tmapdata.findAllPOI(strData, poiItemList -> {
-                        if(poiItemList != null) {
-//                            for (TMapPOIItem item : poiItemList) {
-//                                Log.d("Poi Item",
-//                                        "name:" + item.getPOIName() + " address:" + item.getPOIAddress()
-//                                );
+//        searchButton.setOnClickListener(view -> {
+//            setTracking(true);
+//            tMapView.removeAllTMapPOIItem();
+//            tMapView.removeAllTMapOverlay();
+//            listView.setVisibility(View.GONE);
+//            inputMethodManager.hideSoftInputFromWindow(endPointText.getWindowToken(), 0);
+//
+//            if (start == null || end == null) {
+//                return;
+//            }
+//
+//            frameLayout.setVisibility(View.VISIBLE);
+//
+//            cameraProviderFuture = ProcessCameraProvider.getInstance(getApplicationContext());
+//
+//            cameraProviderFuture.addListener(() -> {
+//                try {
+//                    ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//                    bindPreview(cameraProvider);
+//                } catch (ExecutionException | InterruptedException e) {
+//                    // No errors need to be handled for this Future.
+//                    // This should never be reached.
+//                }
+//            }, ContextCompat.getMainExecutor(getApplicationContext()));
+//
+//            tmapdata.findPathDataWithType(TMapData.TMapPathType.PEDESTRIAN_PATH, start, end, tMapPolyLine -> {
+//                tMapPolyLine.setLineWidth(3);
+//                tMapPolyLine.setLineColor(Color.BLUE);
+//                tMapPolyLine.setLineAlpha(255);
+//
+//                tMapPolyLine.setOutLineWidth(5);
+//                tMapPolyLine.setOutLineColor(Color.RED);
+//                tMapPolyLine.setOutLineAlpha(255);
+//
+//                tMapView.addTMapPolyLine(tMapPolyLine);
+//                TMapInfo info = tMapView.getDisplayTMapInfo(tMapPolyLine.getLinePointList());
+//                tMapView.setZoomLevel(info.getZoom());
+//                tMapView.setCenterPoint(info.getPoint().getLatitude(), info.getPoint().getLongitude());
+//
+//                tMapView.setTMapPath(tMapPolyLine);
+//            });
+//
+//            tmapdata.findPathDataAllType(TMapData.TMapPathType.PEDESTRIAN_PATH, start, end, document -> {
+//                pointList.clear();
+//                Element root = document.getDocumentElement();
+//                NodeList nodeListPlacemark = root.getElementsByTagName("Placemark");
+//                for( int i=0; i<nodeListPlacemark.getLength(); i++ ) {
+//                    NodeList nodeListPlacemarkItem = nodeListPlacemark.item(i).getChildNodes();
+//                    for( int j=0; j<nodeListPlacemarkItem.getLength(); j++ ) {
+//                        if( nodeListPlacemarkItem.item(j).getNodeName().equals("Point") ) {
+//                            NodeList nodeListPoint = nodeListPlacemarkItem.item(j).getChildNodes();
+//                            for( int k=0; k<nodeListPoint.getLength(); k++) {
+//                                if (nodeListPoint.item(k).getNodeName().equals("coordinates")) {
+//                                    Log.d("tmap", nodeListPoint.item(k).getTextContent().trim());
+//
+//                                    String[] point = nodeListPoint.item(k).getTextContent().trim().split(",");
+//                                    pointLat = Double.parseDouble(point[1]);
+//                                    pointLon = Double.parseDouble(point[0]);
+//
+//                                    Log.d("tmap", "lat "+pointLat);
+//                                    Log.d("tmap", "lon "+pointLon);
+//
+//                                    Location location = new Location("point");
+//
+//                                    location.setLatitude(pointLat);
+//                                    location.setLongitude(pointLon);
+//
+//                                    pointList.add(location);
+//                                }
 //                            }
-                            if(startPointText.isFocused()) {
-                                tMapView.addTMapPOIItem(poiItemList);
-                            }
-                            if (start == null) {
-                                MyAdapter arrayAdapter = new MyAdapter(getApplicationContext(), R.layout.list_item, poiItemList);
-                                runOnUiThread(() -> {
-                                    listView.setVisibility(View.VISIBLE);
-                                    listView.setAdapter(arrayAdapter);
-                                    listView.setOnItemClickListener((adapterView, view, i, l) -> {
-                                        startPoint = poiItemList.get(i);
-                                        startPointText.setText(startPoint.getPOIName());
-                                        startPointText.clearFocus();
-                                        start = new TMapPoint(Double.parseDouble(startPoint.frontLat), Double.parseDouble(startPoint.frontLon));
-                                        listView.setVisibility(View.GONE);
-                                        currentPositionButton.setVisibility(View.GONE);
-                                        tMapView.removeAllTMapPOIItem();
-                                        setTracking(false);
-                                        tMapView.setLocationPoint(start.getLatitude(), start.getLongitude());
-                                        inputMethodManager.hideSoftInputFromWindow(startPointText.getWindowToken(), 0);
+//                        }
+//                    }
+//                }
+//
+//                isPathGuide = true;
+//            });
+//        });
 
-                                    });
-                                });
-                            }
-                        }
-                    });
-                }
-                else {
-                    runOnUiThread(() -> listView.setVisibility(View.GONE));
-                }
-            }
-        });
 
         endPointText.setOnTouchListener((view, motionEvent) -> {
             if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
@@ -354,6 +276,7 @@ public class MainActivity extends AppCompatActivity {
 
                                         tMapView.removeAllTMapPOIItem();
                                         tMapView.setLocationPoint(end.getLatitude(), end.getLongitude());
+                                        tMapView.setCenterPoint(end.getLatitude(), end.getLongitude());
                                         TMapMarkerItem endMarkerItem = new TMapMarkerItem();
                                         Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.poi_dot);
                                         endMarkerItem.setId("endMarker");
@@ -489,6 +412,7 @@ public class MainActivity extends AppCompatActivity {
                 .requireLensFacing(CameraSelector.LENS_FACING_BACK)
                 .build();
 
+        previewView.setScaleType(PreviewView.ScaleType.FILL_END);
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
         Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview);
