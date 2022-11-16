@@ -123,14 +123,25 @@ public class MainActivity extends AppCompatActivity {
 
         orientationView = findViewById(R.id.orientationView);
 
+        Bitmap current_icon = BitmapFactory.decodeResource(getResources(), R.drawable.current_icon);
+        current_icon = Bitmap.createScaledBitmap(current_icon, 110, 110, true);
+        Bitmap sight_icon = BitmapFactory.decodeResource(getResources(), R.drawable.sight_icon);
+        sight_icon = Bitmap.createScaledBitmap(sight_icon, 350, 300, true);
+        Bitmap finalCurrent_icon = current_icon;
+        Bitmap finalSight_icon = sight_icon;
+
         manager = new TMapGpsManager(this);
 
         tmapdata = new TMapData();
 
         tMapView = new TMapView(this);
         tMapView.setSKTMapApiKey("l7xx8c266dda82a64d19921918f0225c8193");
+
         tMapView.setOnMapReadyListener(() -> {
             //todo 맵 로딩 완료 후 구현
+            tMapView.setSightImage(finalSight_icon);
+            tMapView.setIcon(finalCurrent_icon);
+
             setTracking(true);
         });
 
@@ -423,8 +434,8 @@ public class MainActivity extends AppCompatActivity {
         if (isTracking) {
             manager.setOnLocationChangeListener(locationListener);
 
-            manager.setMinDistance(1);
-            manager.setMinTime(100);
+            manager.setMinDistance(3);
+            manager.setMinTime(300);
 
             manager.setProvider(TMapGpsManager.PROVIDER_GPS);
             manager.openGps();
