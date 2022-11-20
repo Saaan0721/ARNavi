@@ -74,10 +74,8 @@ public class StartActivity extends AppCompatActivity {
     }
 
     public void startNextActivity() {
-        new Handler().postDelayed(() -> {
-            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-            startActivity(intent);
-            finish();
-        }, 1000);
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        startActivity(intent);
+        finish();
     }
 }

@@ -13,9 +13,12 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -26,6 +29,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -107,11 +111,38 @@ public class MainActivity extends AppCompatActivity {
     public float angleSum = 0;
     public float[] angleList = new float[COUNT];
 
+    public ConstraintLayout mainLayout;
+    public ConstraintLayout loadingLayout;
+    public ImageView locationImage;
+    public EditText endPointText;
+    public TextView logo;
+
+    private int shortAnimationDuration;
+    private boolean isStart = true;
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        String[] permissions = {
+                Manifest.permission.ACTIVITY_RECOGNITION,
+                Manifest.permission.CAMERA,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        };
+
+        mainLayout = findViewById(R.id.mainLayout);
+        loadingLayout = findViewById(R.id.loadingLayout);
+
+        mainLayout.setVisibility(View.GONE);
+        loadingLayout.setVisibility(View.VISIBLE);
+
+        shortAnimationDuration = getResources().getInteger(
+                android.R.integer.config_longAnimTime);
+
+        ConstraintLayout constraintLayout = findViewById(R.id.constraintLayout);
 
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
@@ -137,24 +168,38 @@ public class MainActivity extends AppCompatActivity {
         tMapView = new TMapView(this);
         tMapView.setSKTMapApiKey("l7xx8c266dda82a64d19921918f0225c8193");
 
-        tMapView.setOnMapReadyListener(() -> {
-            //todo 맵 로딩 완료 후 구현
-            tMapView.setSightImage(finalSight_icon);
-            tMapView.setIcon(finalCurrent_icon);
-
-            setTracking(true);
-        });
-
         ConstraintLayout container = findViewById(R.id.Tmap);
         container.addView(tMapView);
 
-        ImageView locationImage = findViewById(R.id.locationImage);
+        locationImage = findViewById(R.id.locationImage);
         locationImage.setOnClickListener(view -> {
             locationImage.setSelected(!locationImage.isSelected());
             setTracking(locationImage.isSelected());
         });
 
-        EditText endPointText = findViewById(R.id.endPointText);
+        endPointText = findViewById(R.id.endPointText);
+
+        logo = findViewById(R.id.logo);
+
+        tMapView.setOnMapReadyListener(() -> {
+            //todo 맵 로딩 완료 후 구현
+
+            tMapView.setSightImage(finalSight_icon);
+            tMapView.setIcon(finalCurrent_icon);
+
+            manager.setOnLocationChangeListener(locationListener);
+
+            manager.setMinDistance(3);
+            manager.setMinTime(300);
+
+            manager.setProvider(TMapGpsManager.PROVIDER_GPS);
+            manager.openGps();
+
+            manager.setProvider(TMapGpsManager.PROVIDER_NETWORK);
+            manager.openGps();
+
+            tMapView.setTrackingMode(true);
+        });
 
         ListView listView = findViewById(R.id.listView);
 
@@ -445,15 +490,15 @@ public class MainActivity extends AppCompatActivity {
 
             tMapView.setTrackingMode(true);
             tMapView.setSightVisible(true);
-            tMapView.setCompassMode(true);
-            tMapView.setZoomLevel(16);
+            tMapView.setCompassModeFix(true);
+//            tMapView.setZoomLevel(16);
         } else {
             manager.closeGps();
             manager.setOnLocationChangeListener(null);
 
             tMapView.setTrackingMode(false);
             tMapView.setSightVisible(false);
-            tMapView.setCompassMode(false);
+            tMapView.setCompassModeFix(false);
         }
     }
 
@@ -463,63 +508,35 @@ public class MainActivity extends AppCompatActivity {
             if (location != null) {
                 currentLocation = location;
                 tMapView.setLocationPoint(location.getLatitude(), location.getLongitude());
-            }
-        }
-    };
-}
 
-
-class PermissionSupport {
-
-    private Context context;
-    private Activity activity;
-
-    private String[] permissions = {
-            Manifest.permission.ACTIVITY_RECOGNITION,
-            Manifest.permission.CAMERA,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-    };
-
-    private List permissionList;
-
-    private final int MULTIPLE_PERMISSIONS = 1023;
-
-    public PermissionSupport(Activity _activity, Context _context) {
-        this.activity = _activity;
-        this.context = _context;
-    }
-
-    public boolean checkPermission() {
-        int result;
-
-        permissionList = new ArrayList<>();
-
-        for (String pm : permissions) {
-            result = ContextCompat.checkSelfPermission(context, pm);
-            if (result != PackageManager.PERMISSION_GRANTED) {
-                permissionList.add(pm);
-            }
-        }
-
-        return permissionList.isEmpty();
-    }
-
-    public void requestPermission() {
-        ActivityCompat.requestPermissions(activity,
-                (String[]) permissionList.toArray(new String[0]),
-                MULTIPLE_PERMISSIONS);
-    }
-
-    public boolean permissionResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == MULTIPLE_PERMISSIONS && grantResults.length > 0) {
-            for (int grantResult : grantResults) {
-                if (grantResult == -1) {
-                    return false;
+                if (isStart) {
+                    isStart = false;
+                    new Handler().postDelayed(() -> {
+                        crossfade();
+                    }, 1000);
                 }
             }
         }
-        return true;
+    };
+
+    private void crossfade() {
+        mainLayout.setAlpha(0f);
+        mainLayout.setVisibility(View.VISIBLE);
+
+        mainLayout.animate()
+                .alpha(1f)
+                .setDuration(shortAnimationDuration)
+                .setListener(null);
+
+        loadingLayout.animate()
+                .alpha(0f)
+                .setDuration(shortAnimationDuration)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        loadingLayout.setVisibility(View.GONE);
+                    }
+                });
     }
 }
 
