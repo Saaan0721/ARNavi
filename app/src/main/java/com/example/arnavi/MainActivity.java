@@ -20,9 +20,11 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.PointF;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -51,6 +53,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.skt.tmap.TMapData;
 import com.skt.tmap.TMapGpsManager;
 import com.skt.tmap.TMapInfo;
+import com.skt.tmap.TMapLabelInfo;
 import com.skt.tmap.TMapPoint;
 import com.skt.tmap.TMapView;
 import com.skt.tmap.overlay.TMapMarkerItem;
@@ -126,13 +129,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        String[] permissions = {
-                Manifest.permission.ACTIVITY_RECOGNITION,
-                Manifest.permission.CAMERA,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION
-        };
-
         mainLayout = findViewById(R.id.mainLayout);
         loadingLayout = findViewById(R.id.loadingLayout);
 
@@ -181,13 +177,52 @@ public class MainActivity extends AppCompatActivity {
 
         logo = findViewById(R.id.logo);
 
+        tMapView.setOnClickListenerCallback(new TMapView.OnClickListenerCallback() {
+            @Override
+            public void onPressDown(ArrayList<TMapMarkerItem> arrayList, ArrayList<TMapPOIItem> arrayList1, TMapPoint tMapPoint, PointF pointF) {
+                if (tMapView.isTrackingMode()) {
+                    setTracking(false);
+                    locationImage.setSelected(false);
+                }
+            }
+
+            @Override
+            public void onPressUp(ArrayList<TMapMarkerItem> arrayList, ArrayList<TMapPOIItem> arrayList1, TMapPoint tMapPoint, PointF pointF) {
+
+
+            }
+        });
+
         tMapView.setOnMapReadyListener(() -> {
             //todo 맵 로딩 완료 후 구현
 
+            int currentNightMode = getResources().getConfiguration().uiMode
+                    & Configuration.UI_MODE_NIGHT_MASK;
+
+            switch (currentNightMode) {
+                case Configuration.UI_MODE_NIGHT_NO:
+                tMapView.setMapType(TMapView.MapType.DEFAULT);
+                    break;
+                case Configuration.UI_MODE_NIGHT_YES:
+                    tMapView.setMapType(TMapView.MapType.NIGHT);
+                    break;
+                case Configuration.UI_MODE_NIGHT_UNDEFINED:
+                    tMapView.setMapType(TMapView.MapType.DEFAULT);
+                    break;
+            }
+
+            tMapView.setZoomLevel(16);
             tMapView.setSightImage(finalSight_icon);
             tMapView.setIcon(finalCurrent_icon);
+            tMapView.setVisibleLogo(false);
+            tMapView.setOnClickReverseLabelListener(new TMapView.OnClickReverseLabelListenerCallback() {
+                @Override
+                public void onClickReverseLabel(TMapLabelInfo tMapLabelInfo) {
+                    Log.d("AR Navi", tMapLabelInfo.toString());
+                }
+            });
 
-            manager.setOnLocationChangeListener(locationListener);
+            manager.setOnLocationChangeListener(trackingLocationListener);
 
             manager.setMinDistance(3);
             manager.setMinTime(300);
@@ -400,7 +435,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
     public void updateOrientationAngles() {
         // Update rotation matrix, which is needed to update orientation angles.
         SensorManager.getRotationMatrix(rotationMatrix, null,
@@ -477,32 +511,33 @@ public class MainActivity extends AppCompatActivity {
 
     private void setTracking(boolean isTracking) {
         if (isTracking) {
-            manager.setOnLocationChangeListener(locationListener);
-
-            manager.setMinDistance(3);
-            manager.setMinTime(300);
-
-            manager.setProvider(TMapGpsManager.PROVIDER_GPS);
-            manager.openGps();
-
-            manager.setProvider(TMapGpsManager.PROVIDER_NETWORK);
-            manager.openGps();
+            manager.setOnLocationChangeListener(trackingLocationListener);
+//
+//            manager.setMinDistance(3);
+//            manager.setMinTime(300);
+//
+//            manager.setProvider(TMapGpsManager.PROVIDER_GPS);
+//            manager.openGps();
+//
+//            manager.setProvider(TMapGpsManager.PROVIDER_NETWORK);
+//            manager.openGps();
 
             tMapView.setTrackingMode(true);
             tMapView.setSightVisible(true);
             tMapView.setCompassModeFix(true);
 //            tMapView.setZoomLevel(16);
         } else {
-            manager.closeGps();
-            manager.setOnLocationChangeListener(null);
+            manager.setOnLocationChangeListener(nonTrackingLocationListener);
+//            manager.closeGps();
+//            manager.setOnLocationChangeListener(null);
 
-            tMapView.setTrackingMode(false);
+            tMapView.setTrackingMode(true);
             tMapView.setSightVisible(false);
             tMapView.setCompassModeFix(false);
         }
     }
 
-    private TMapGpsManager.OnLocationChangedListener locationListener = new TMapGpsManager.OnLocationChangedListener() {
+    private TMapGpsManager.OnLocationChangedListener trackingLocationListener = new TMapGpsManager.OnLocationChangedListener() {
         @Override
         public void onLocationChange(Location location) {
             if (location != null) {
@@ -515,6 +550,16 @@ public class MainActivity extends AppCompatActivity {
                         crossfade();
                     }, 1000);
                 }
+            }
+        }
+    };
+
+    private TMapGpsManager.OnLocationChangedListener nonTrackingLocationListener = new TMapGpsManager.OnLocationChangedListener() {
+        @Override
+        public void onLocationChange(Location location) {
+            if (location != null) {
+                currentLocation = location;
+//                tMapView.setCenterPoint(location.getLatitude(), location.getLongitude(), true);
             }
         }
     };
