@@ -10,6 +10,7 @@ import androidx.camera.view.PreviewView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
 import androidx.lifecycle.LifecycleOwner;
 
 import android.Manifest;
@@ -32,9 +33,12 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -50,12 +54,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.skt.tmap.TMapAutoCompleteV2;
 import com.skt.tmap.TMapData;
 import com.skt.tmap.TMapGpsManager;
 import com.skt.tmap.TMapInfo;
 import com.skt.tmap.TMapLabelInfo;
 import com.skt.tmap.TMapPoint;
 import com.skt.tmap.TMapView;
+import com.skt.tmap.address.TMapAddressInfo;
 import com.skt.tmap.overlay.TMapMarkerItem;
 import com.skt.tmap.poi.TMapPOIItem;
 
@@ -64,6 +70,7 @@ import org.w3c.dom.NodeList;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
@@ -119,9 +126,18 @@ public class MainActivity extends AppCompatActivity {
     public ImageView locationImage;
     public EditText endPointText;
     public TextView logo;
+    public ConstraintLayout information;
+    public TextView locationName;
+    public TextView locationAddress;
+    public ConstraintLayout searchBtn;
+    public ListView listView;
+    public FrameLayout frameLayout;
+    public TMapPoint POILocation;
 
     private int shortAnimationDuration;
     private boolean isStart = true;
+
+    private String API_KEY = "l7xx8c266dda82a64d19921918f0225c8193";
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -144,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
-        FrameLayout frameLayout = findViewById(R.id.container);
+        frameLayout = findViewById(R.id.container);
         previewView = findViewById(R.id.previewView);
         arrow = findViewById(R.id.arrow);
 
@@ -162,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
         tmapdata = new TMapData();
 
         tMapView = new TMapView(this);
-        tMapView.setSKTMapApiKey("l7xx8c266dda82a64d19921918f0225c8193");
+        tMapView.setSKTMapApiKey(API_KEY);
 
         ConstraintLayout container = findViewById(R.id.Tmap);
         container.addView(tMapView);
@@ -174,6 +190,22 @@ public class MainActivity extends AppCompatActivity {
         });
 
         endPointText = findViewById(R.id.endPointText);
+
+        information = findViewById(R.id.information);
+        locationName = findViewById(R.id.locationName);
+        locationAddress = findViewById(R.id.locationAddress);
+        searchBtn = findViewById(R.id.searchBtn);
+
+        searchBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                start = new TMapPoint(currentLocation.getLatitude(), currentLocation.getLongitude());
+                end = POILocation;
+                searchBtn.setVisibility(View.GONE);
+                information.setVisibility(View.GONE);
+                navigate();
+            }
+        });
 
         logo = findViewById(R.id.logo);
 
@@ -219,6 +251,42 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onClickReverseLabel(TMapLabelInfo tMapLabelInfo) {
                     Log.d("AR Navi", tMapLabelInfo.toString());
+
+                    POILocation = new TMapPoint(tMapLabelInfo.getLat(), tMapLabelInfo.getLon());
+
+                    tmapdata.autoCompleteV2(tMapLabelInfo.getName(), tMapLabelInfo.getLat(),
+                            tMapLabelInfo.getLon(), 1, 10,
+                            arrayList -> {
+                                for (int i = 0; i < arrayList.size(); i++) {
+                                    TMapAutoCompleteV2 tMapAutoCompleteV2 = arrayList.get(i);
+                                    if (Objects.equals(tMapAutoCompleteV2.poiId, tMapLabelInfo.getId())) {
+                                        if(tMapView.getMarkerItemFromId("selectMarker") != null) {
+                                            tMapView.removeTMapPOIItem("selectMarker");
+                                        }
+
+                                        TMapMarkerItem selectMarkerItem = new TMapMarkerItem();
+                                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.poi_dot);
+                                        selectMarkerItem.setId("selectMarker");
+                                        selectMarkerItem.setIcon(bitmap);
+                                        selectMarkerItem.setTMapPoint(POILocation);
+
+                                        tMapView.addTMapMarkerItem(selectMarkerItem);
+
+                                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                            information.setVisibility(View.VISIBLE);
+                                            locationName.setText(tMapAutoCompleteV2.keyword);
+                                            if (tMapAutoCompleteV2.fullAddress.contains("로")) {
+                                                locationAddress.setText(tMapAutoCompleteV2.fullAddress);
+                                            } else {
+                                                locationAddress.setText(tMapAutoCompleteV2.fullAddressJibun);
+                                            }
+
+                                            searchBtn.setVisibility(View.VISIBLE);
+                                            listView.setVisibility(View.GONE);
+                                        }, 0);
+                                    }
+                                }
+                            });
                 }
             });
 
@@ -236,90 +304,15 @@ public class MainActivity extends AppCompatActivity {
             tMapView.setTrackingMode(true);
         });
 
-        ListView listView = findViewById(R.id.listView);
-
-//        searchButton.setOnClickListener(view -> {
-//            setTracking(true);
-//            tMapView.removeAllTMapPOIItem();
-//            tMapView.removeAllTMapOverlay();
-//            listView.setVisibility(View.GONE);
-//            inputMethodManager.hideSoftInputFromWindow(endPointText.getWindowToken(), 0);
-//
-//            if (start == null || end == null) {
-//                return;
-//            }
-//
-//            frameLayout.setVisibility(View.VISIBLE);
-//
-//            cameraProviderFuture = ProcessCameraProvider.getInstance(getApplicationContext());
-//
-//            cameraProviderFuture.addListener(() -> {
-//                try {
-//                    ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-//                    bindPreview(cameraProvider);
-//                } catch (ExecutionException | InterruptedException e) {
-//                    // No errors need to be handled for this Future.
-//                    // This should never be reached.
-//                }
-//            }, ContextCompat.getMainExecutor(getApplicationContext()));
-//
-//            tmapdata.findPathDataWithType(TMapData.TMapPathType.PEDESTRIAN_PATH, start, end, tMapPolyLine -> {
-//                tMapPolyLine.setLineWidth(3);
-//                tMapPolyLine.setLineColor(Color.BLUE);
-//                tMapPolyLine.setLineAlpha(255);
-//
-//                tMapPolyLine.setOutLineWidth(5);
-//                tMapPolyLine.setOutLineColor(Color.RED);
-//                tMapPolyLine.setOutLineAlpha(255);
-//
-//                tMapView.addTMapPolyLine(tMapPolyLine);
-//                TMapInfo info = tMapView.getDisplayTMapInfo(tMapPolyLine.getLinePointList());
-//                tMapView.setZoomLevel(info.getZoom());
-//                tMapView.setCenterPoint(info.getPoint().getLatitude(), info.getPoint().getLongitude());
-//
-//                tMapView.setTMapPath(tMapPolyLine);
-//            });
-//
-//            tmapdata.findPathDataAllType(TMapData.TMapPathType.PEDESTRIAN_PATH, start, end, document -> {
-//                pointList.clear();
-//                Element root = document.getDocumentElement();
-//                NodeList nodeListPlacemark = root.getElementsByTagName("Placemark");
-//                for( int i=0; i<nodeListPlacemark.getLength(); i++ ) {
-//                    NodeList nodeListPlacemarkItem = nodeListPlacemark.item(i).getChildNodes();
-//                    for( int j=0; j<nodeListPlacemarkItem.getLength(); j++ ) {
-//                        if( nodeListPlacemarkItem.item(j).getNodeName().equals("Point") ) {
-//                            NodeList nodeListPoint = nodeListPlacemarkItem.item(j).getChildNodes();
-//                            for( int k=0; k<nodeListPoint.getLength(); k++) {
-//                                if (nodeListPoint.item(k).getNodeName().equals("coordinates")) {
-//                                    Log.d("tmap", nodeListPoint.item(k).getTextContent().trim());
-//
-//                                    String[] point = nodeListPoint.item(k).getTextContent().trim().split(",");
-//                                    pointLat = Double.parseDouble(point[1]);
-//                                    pointLon = Double.parseDouble(point[0]);
-//
-//                                    Log.d("tmap", "lat "+pointLat);
-//                                    Log.d("tmap", "lon "+pointLon);
-//
-//                                    Location location = new Location("point");
-//
-//                                    location.setLatitude(pointLat);
-//                                    location.setLongitude(pointLon);
-//
-//                                    pointList.add(location);
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                isPathGuide = true;
-//            });
-//        });
+        listView = findViewById(R.id.listView);
 
 
         endPointText.setOnTouchListener((view, motionEvent) -> {
             if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
                 end = null;
+            }
+            if(tMapView.getMarkerItemFromId("selectMarker") != null) {
+                tMapView.removeTMapPOIItem("selectMarker");
             }
             return false;
         });
@@ -338,55 +331,133 @@ public class MainActivity extends AppCompatActivity {
                 tMapView.removeAllTMapPOIItem();
 
                 if(!strData.trim().isEmpty()) {
-                    tmapdata.findAllPOI(strData, poiItemList -> {
-                        if(poiItemList != null) {
-//                            for (TMapPOIItem item : poiItemList) {
-//                                Log.d("Poi Item",
-//                                        "name:" + item.getPOIName() + " address:" + item.getPOIAddress()
-//                                );
-//                            }
-
-                            if(endPointText.isFocused()) {
-                                tMapView.addTMapPOIItem(poiItemList);
-                            }
-
-                            if (end == null) {
-                                MyAdapter arrayAdapter = new MyAdapter(getApplicationContext(), R.layout.list_item, poiItemList);
-                                runOnUiThread(() -> {
-                                    listView.setVisibility(View.VISIBLE);
-                                    listView.setAdapter(arrayAdapter);
-                                    listView.setOnItemClickListener((adapterView, view, i, l) -> {
-                                        endPoint = poiItemList.get(i);
-                                        endPointText.setText(endPoint.getPOIName());
-                                        endPointText.clearFocus();
-                                        listView.setVisibility(View.GONE);
-
-                                        setTracking(false);
-
-                                        end = new TMapPoint(Double.parseDouble(endPoint.frontLat), Double.parseDouble(endPoint.frontLon));
-
-                                        tMapView.removeAllTMapPOIItem();
-                                        tMapView.setLocationPoint(end.getLatitude(), end.getLongitude());
-                                        tMapView.setCenterPoint(end.getLatitude(), end.getLongitude());
-                                        TMapMarkerItem endMarkerItem = new TMapMarkerItem();
-                                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.poi_dot);
-                                        endMarkerItem.setId("endMarker");
-                                        endMarkerItem.setIcon(bitmap);
-                                        endMarkerItem.setTMapPoint(end);
-                                        tMapView.addTMapMarkerItem(endMarkerItem);
-
-                                        inputMethodManager.hideSoftInputFromWindow(endPointText.getWindowToken(), 0);
+                    tmapdata.autoCompleteV2(strData, tMapView.getCenterPoint().getLatitude(),
+                            tMapView.getCenterPoint().getLongitude(), 0, count,
+                            (TMapData.OnAutoCompleteV2Listener) arrayList -> {
+                                if (end == null) {
+                                    MyAdapter arrayAdapter = new MyAdapter(getApplicationContext(), R.layout.list_item, arrayList);
+                                    runOnUiThread(() -> {
+                                        listView.setVisibility(View.VISIBLE);
+                                        listView.setAdapter(arrayAdapter);
+//                                        listView.setOnItemClickListener((adapterView, view, i, l) -> {
+//                                            endPoint = arrayList.get(i);
+//                                            endPointText.setText(endPoint.getPOIName());
+//                                            endPointText.clearFocus();
+//                                            listView.setVisibility(View.GONE);
+//
+//                                            setTracking(false);
+//
+//                                            end = new TMapPoint(Double.parseDouble(endPoint.frontLat), Double.parseDouble(endPoint.frontLon));
+//
+//                                            tMapView.removeAllTMapPOIItem();
+//                                            tMapView.setLocationPoint(end.getLatitude(), end.getLongitude());
+//                                            tMapView.setCenterPoint(end.getLatitude(), end.getLongitude());
+//                                            TMapMarkerItem endMarkerItem = new TMapMarkerItem();
+//                                            Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.poi_dot);
+//                                            endMarkerItem.setId("endMarker");
+//                                            endMarkerItem.setIcon(bitmap);
+//                                            endMarkerItem.setTMapPoint(end);
+//                                            tMapView.addTMapMarkerItem(endMarkerItem);
+//
+//                                            inputMethodManager.hideSoftInputFromWindow(endPointText.getWindowToken(), 0);
+//                                        });
                                     });
-                                });
-                            }
-                        }
-                    });
+                                }
+                            });
                 }
                 else {
                     runOnUiThread(() -> listView.setVisibility(View.GONE));
                 }
             }
         });
+    }
+
+    public void navigate() {
+        setTracking(true);
+        tMapView.removeAllTMapPOIItem();
+        tMapView.removeAllTMapOverlay();
+
+        if (start == null || end == null) {
+            return;
+        }
+
+        frameLayout.setVisibility(View.VISIBLE);
+
+        cameraProviderFuture = ProcessCameraProvider.getInstance(getApplicationContext());
+
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                bindPreview(cameraProvider);
+            } catch (ExecutionException | InterruptedException e) {
+                // No errors need to be handled for this Future.
+                // This should never be reached.
+            }
+        }, ContextCompat.getMainExecutor(getApplicationContext()));
+
+        tmapdata.findPathDataWithType(TMapData.TMapPathType.PEDESTRIAN_PATH, start, end, tMapPolyLine -> {
+            tMapPolyLine.setLineWidth(3);
+            tMapPolyLine.setLineColor(Color.BLUE);
+            tMapPolyLine.setLineAlpha(255);
+
+            tMapPolyLine.setOutLineWidth(5);
+            tMapPolyLine.setOutLineColor(Color.RED);
+            tMapPolyLine.setOutLineAlpha(255);
+
+            tMapView.addTMapPolyLine(tMapPolyLine);
+            TMapInfo info = tMapView.getDisplayTMapInfo(tMapPolyLine.getLinePointList());
+            tMapView.setZoomLevel(info.getZoom());
+            tMapView.setCenterPoint(info.getPoint().getLatitude(), info.getPoint().getLongitude());
+
+            tMapView.setTMapPath(tMapPolyLine);
+        });
+
+        tmapdata.findPathDataAllType(TMapData.TMapPathType.PEDESTRIAN_PATH, start, end, document -> {
+            pointList.clear();
+            Element root = document.getDocumentElement();
+            NodeList nodeListPlacemark = root.getElementsByTagName("Placemark");
+            for( int i=0; i<nodeListPlacemark.getLength(); i++ ) {
+                NodeList nodeListPlacemarkItem = nodeListPlacemark.item(i).getChildNodes();
+                for( int j=0; j<nodeListPlacemarkItem.getLength(); j++ ) {
+                    if( nodeListPlacemarkItem.item(j).getNodeName().equals("Point") ) {
+                        NodeList nodeListPoint = nodeListPlacemarkItem.item(j).getChildNodes();
+                        for( int k=0; k<nodeListPoint.getLength(); k++) {
+                            if (nodeListPoint.item(k).getNodeName().equals("coordinates")) {
+                                Log.d("tmap", nodeListPoint.item(k).getTextContent().trim());
+
+                                String[] point = nodeListPoint.item(k).getTextContent().trim().split(",");
+                                pointLat = Double.parseDouble(point[1]);
+                                pointLon = Double.parseDouble(point[0]);
+
+                                Log.d("tmap", "lat "+pointLat);
+                                Log.d("tmap", "lon "+pointLon);
+
+                                Location location = new Location("point");
+
+                                location.setLatitude(pointLat);
+                                location.setLongitude(pointLon);
+
+                                pointList.add(location);
+                            }
+                        }
+                    }
+                }
+            }
+
+            isPathGuide = true;
+        });
+    }
+
+    @Override
+    public boolean onKeyDown(int keycode, KeyEvent event) {
+        if (keycode == KeyEvent.KEYCODE_BACK) {
+            if (information.getVisibility() == View.VISIBLE) {
+                information.setVisibility(View.GONE);
+            }
+            return true;
+        }
+
+        return false;
     }
 
     @Override
@@ -529,9 +600,10 @@ public class MainActivity extends AppCompatActivity {
         } else {
             manager.setOnLocationChangeListener(nonTrackingLocationListener);
 //            manager.closeGps();
+
 //            manager.setOnLocationChangeListener(null);
 
-            tMapView.setTrackingMode(true);
+            tMapView.setTrackingMode(false);
             tMapView.setSightVisible(false);
             tMapView.setCompassModeFix(false);
         }
@@ -543,6 +615,7 @@ public class MainActivity extends AppCompatActivity {
             if (location != null) {
                 currentLocation = location;
                 tMapView.setLocationPoint(location.getLatitude(), location.getLongitude());
+//                tMapView.setCenterPoint(location.getLatitude(), location.getLongitude(), true);
 
                 if (isStart) {
                     isStart = false;
@@ -559,6 +632,7 @@ public class MainActivity extends AppCompatActivity {
         public void onLocationChange(Location location) {
             if (location != null) {
                 currentLocation = location;
+
 //                tMapView.setCenterPoint(location.getLatitude(), location.getLongitude(), true);
             }
         }
@@ -590,9 +664,9 @@ class MyAdapter extends BaseAdapter {
 
     Context context;
     int layoutId;
-    ArrayList<TMapPOIItem> myDataArr;
+    ArrayList<TMapAutoCompleteV2> myDataArr;
     LayoutInflater Inflater;
-    MyAdapter(Context _context, int _layout, ArrayList<TMapPOIItem> _myDataArr) {
+    MyAdapter(Context _context, int _layout, ArrayList<TMapAutoCompleteV2> _myDataArr) {
         context = _context;
         layoutId = _layout;
         myDataArr = _myDataArr;
@@ -606,7 +680,7 @@ class MyAdapter extends BaseAdapter {
 
     @Override
     public Object getItem(int i) {
-        return myDataArr.get(i).name;
+        return myDataArr.get(i).keyword;
     }
 
     @Override
@@ -621,10 +695,10 @@ class MyAdapter extends BaseAdapter {
         }
 
         TextView nameView = view.findViewById(R.id.name);
-        nameView.setText(myDataArr.get(i).getPOIName());
+        nameView.setText(myDataArr.get(i).keyword);
 
         TextView addressView = view.findViewById(R.id.address);
-        addressView.setText(myDataArr.get(i).getPOIAddress());
+        addressView.setText(myDataArr.get(i).fullAddress);
 
         return view;
     }
