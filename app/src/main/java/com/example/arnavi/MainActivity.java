@@ -8,19 +8,12 @@ import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.WindowCompat;
-import androidx.lifecycle.LifecycleOwner;
 
-import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -34,7 +27,6 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Message;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -45,7 +37,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -58,10 +49,8 @@ import com.skt.tmap.TMapAutoCompleteV2;
 import com.skt.tmap.TMapData;
 import com.skt.tmap.TMapGpsManager;
 import com.skt.tmap.TMapInfo;
-import com.skt.tmap.TMapLabelInfo;
 import com.skt.tmap.TMapPoint;
 import com.skt.tmap.TMapView;
-import com.skt.tmap.address.TMapAddressInfo;
 import com.skt.tmap.overlay.TMapMarkerItem;
 import com.skt.tmap.poi.TMapPOIItem;
 
@@ -69,11 +58,27 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
+
+    public ConstraintLayout constraintLayout;
+    public ConstraintLayout mainLayout;
+    public FrameLayout container;
+    public PreviewView previewView;
+    public ImageView arrow;
+    public ConstraintLayout tmap;
+    public EditText endPointText;
+    public ListView listView;
+    public ConstraintLayout information;
+    public TextView locationName;
+    public TextView locationAddress;
+    public ConstraintLayout searchBtn;
+    public TextView orientationView;
+    public ImageView locationImage;
+    public ConstraintLayout loadingLayout;
+    public TextView logo;
 
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
@@ -107,12 +112,6 @@ public class MainActivity extends AppCompatActivity {
 
     public boolean isPathGuide = false;
 
-    public PreviewView previewView;
-
-    public TextView orientationView;
-
-    public ImageView arrow;
-
     public int nowIndex = 0;
     public int oldIndex = 0;
 
@@ -121,17 +120,6 @@ public class MainActivity extends AppCompatActivity {
     public float angleSum = 0;
     public float[] angleList = new float[COUNT];
 
-    public ConstraintLayout mainLayout;
-    public ConstraintLayout loadingLayout;
-    public ImageView locationImage;
-    public EditText endPointText;
-    public TextView logo;
-    public ConstraintLayout information;
-    public TextView locationName;
-    public TextView locationAddress;
-    public ConstraintLayout searchBtn;
-    public ListView listView;
-    public FrameLayout frameLayout;
     public TMapPoint POILocation;
 
     private int shortAnimationDuration;
@@ -145,8 +133,23 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        constraintLayout = findViewById(R.id.constraintLayout);
         mainLayout = findViewById(R.id.mainLayout);
+        container = findViewById(R.id.container);
+        previewView = findViewById(R.id.previewView);
+        arrow = findViewById(R.id.arrow);
+        tmap = findViewById(R.id.tmap);
+        endPointText = findViewById(R.id.endPointText);
+        listView = findViewById(R.id.listView);
+        information = findViewById(R.id.information);
+        locationName = findViewById(R.id.locationName);
+        locationAddress = findViewById(R.id.locationAddress);
+        searchBtn = findViewById(R.id.searchBtn);
+        orientationView = findViewById(R.id.orientationView);
+        locationImage = findViewById(R.id.locationImage);
         loadingLayout = findViewById(R.id.loadingLayout);
+        logo = findViewById(R.id.logo);
+
 
         mainLayout.setVisibility(View.GONE);
         loadingLayout.setVisibility(View.VISIBLE);
@@ -154,17 +157,9 @@ public class MainActivity extends AppCompatActivity {
         shortAnimationDuration = getResources().getInteger(
                 android.R.integer.config_longAnimTime);
 
-        ConstraintLayout constraintLayout = findViewById(R.id.constraintLayout);
-
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-        frameLayout = findViewById(R.id.container);
-        previewView = findViewById(R.id.previewView);
-        arrow = findViewById(R.id.arrow);
-
-        orientationView = findViewById(R.id.orientationView);
 
         Bitmap current_icon = BitmapFactory.decodeResource(getResources(), R.drawable.current_icon);
         current_icon = Bitmap.createScaledBitmap(current_icon, 110, 110, true);
@@ -174,40 +169,23 @@ public class MainActivity extends AppCompatActivity {
         Bitmap finalSight_icon = sight_icon;
 
         manager = new TMapGpsManager(this);
-
         tmapdata = new TMapData();
-
         tMapView = new TMapView(this);
         tMapView.setSKTMapApiKey(API_KEY);
+        tmap.addView(tMapView);
 
-        ConstraintLayout container = findViewById(R.id.Tmap);
-        container.addView(tMapView);
-
-        locationImage = findViewById(R.id.locationImage);
         locationImage.setOnClickListener(view -> {
             locationImage.setSelected(!locationImage.isSelected());
             setTracking(locationImage.isSelected());
         });
 
-        endPointText = findViewById(R.id.endPointText);
-
-        information = findViewById(R.id.information);
-        locationName = findViewById(R.id.locationName);
-        locationAddress = findViewById(R.id.locationAddress);
-        searchBtn = findViewById(R.id.searchBtn);
-
-        searchBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                start = new TMapPoint(currentLocation.getLatitude(), currentLocation.getLongitude());
-                end = POILocation;
-                searchBtn.setVisibility(View.GONE);
-                information.setVisibility(View.GONE);
-                navigate();
-            }
+        searchBtn.setOnClickListener(view -> {
+            start = new TMapPoint(currentLocation.getLatitude(), currentLocation.getLongitude());
+            end = POILocation;
+            searchBtn.setVisibility(View.GONE);
+            information.setVisibility(View.GONE);
+            navigate();
         });
-
-        logo = findViewById(R.id.logo);
 
         tMapView.setOnClickListenerCallback(new TMapView.OnClickListenerCallback() {
             @Override
@@ -219,10 +197,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onPressUp(ArrayList<TMapMarkerItem> arrayList, ArrayList<TMapPOIItem> arrayList1, TMapPoint tMapPoint, PointF pointF) {
-
-
-            }
+            public void onPressUp(ArrayList<TMapMarkerItem> arrayList, ArrayList<TMapPOIItem> arrayList1, TMapPoint tMapPoint, PointF pointF) { }
         });
 
         tMapView.setOnMapReadyListener(() -> {
@@ -233,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
 
             switch (currentNightMode) {
                 case Configuration.UI_MODE_NIGHT_NO:
-                tMapView.setMapType(TMapView.MapType.DEFAULT);
+                    tMapView.setMapType(TMapView.MapType.DEFAULT);
                     break;
                 case Configuration.UI_MODE_NIGHT_YES:
                     tMapView.setMapType(TMapView.MapType.NIGHT);
@@ -247,47 +222,44 @@ public class MainActivity extends AppCompatActivity {
             tMapView.setSightImage(finalSight_icon);
             tMapView.setIcon(finalCurrent_icon);
             tMapView.setVisibleLogo(false);
-            tMapView.setOnClickReverseLabelListener(new TMapView.OnClickReverseLabelListenerCallback() {
-                @Override
-                public void onClickReverseLabel(TMapLabelInfo tMapLabelInfo) {
-                    Log.d("AR Navi", tMapLabelInfo.toString());
+            tMapView.setOnClickReverseLabelListener(tMapLabelInfo -> {
+                Log.d("AR Navi", tMapLabelInfo.toString());
 
-                    POILocation = new TMapPoint(tMapLabelInfo.getLat(), tMapLabelInfo.getLon());
+                POILocation = new TMapPoint(tMapLabelInfo.getLat(), tMapLabelInfo.getLon());
 
-                    tmapdata.autoCompleteV2(tMapLabelInfo.getName(), tMapLabelInfo.getLat(),
-                            tMapLabelInfo.getLon(), 1, 10,
-                            arrayList -> {
-                                for (int i = 0; i < arrayList.size(); i++) {
-                                    TMapAutoCompleteV2 tMapAutoCompleteV2 = arrayList.get(i);
-                                    if (Objects.equals(tMapAutoCompleteV2.poiId, tMapLabelInfo.getId())) {
-                                        if(tMapView.getMarkerItemFromId("selectMarker") != null) {
-                                            tMapView.removeTMapPOIItem("selectMarker");
+                tmapdata.autoCompleteV2(tMapLabelInfo.getName(), tMapLabelInfo.getLat(),
+                        tMapLabelInfo.getLon(), 1, 10,
+                        arrayList -> {
+                            for (int i = 0; i < arrayList.size(); i++) {
+                                TMapAutoCompleteV2 tMapAutoCompleteV2 = arrayList.get(i);
+                                if (Objects.equals(tMapAutoCompleteV2.poiId, tMapLabelInfo.getId())) {
+                                    if(tMapView.getMarkerItemFromId("selectMarker") != null) {
+                                        tMapView.removeTMapPOIItem("selectMarker");
+                                    }
+
+                                    TMapMarkerItem selectMarkerItem = new TMapMarkerItem();
+                                    Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.poi_dot);
+                                    selectMarkerItem.setId("selectMarker");
+                                    selectMarkerItem.setIcon(bitmap);
+                                    selectMarkerItem.setTMapPoint(POILocation);
+
+                                    tMapView.addTMapMarkerItem(selectMarkerItem);
+
+                                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                        information.setVisibility(View.VISIBLE);
+                                        locationName.setText(tMapAutoCompleteV2.keyword);
+                                        if (tMapAutoCompleteV2.fullAddress.contains("로")) {
+                                            locationAddress.setText(tMapAutoCompleteV2.fullAddress);
+                                        } else {
+                                            locationAddress.setText(tMapAutoCompleteV2.fullAddressJibun);
                                         }
 
-                                        TMapMarkerItem selectMarkerItem = new TMapMarkerItem();
-                                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.poi_dot);
-                                        selectMarkerItem.setId("selectMarker");
-                                        selectMarkerItem.setIcon(bitmap);
-                                        selectMarkerItem.setTMapPoint(POILocation);
-
-                                        tMapView.addTMapMarkerItem(selectMarkerItem);
-
-                                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                            information.setVisibility(View.VISIBLE);
-                                            locationName.setText(tMapAutoCompleteV2.keyword);
-                                            if (tMapAutoCompleteV2.fullAddress.contains("로")) {
-                                                locationAddress.setText(tMapAutoCompleteV2.fullAddress);
-                                            } else {
-                                                locationAddress.setText(tMapAutoCompleteV2.fullAddressJibun);
-                                            }
-
-                                            searchBtn.setVisibility(View.VISIBLE);
-                                            listView.setVisibility(View.GONE);
-                                        }, 0);
-                                    }
+                                        searchBtn.setVisibility(View.VISIBLE);
+                                        listView.setVisibility(View.GONE);
+                                    }, 0);
                                 }
-                            });
-                }
+                            }
+                        });
             });
 
             manager.setOnLocationChangeListener(trackingLocationListener);
@@ -303,8 +275,6 @@ public class MainActivity extends AppCompatActivity {
 
             tMapView.setTrackingMode(true);
         });
-
-        listView = findViewById(R.id.listView);
 
 
         endPointText.setOnTouchListener((view, motionEvent) -> {
@@ -381,7 +351,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        frameLayout.setVisibility(View.VISIBLE);
+        container.setVisibility(View.VISIBLE);
 
         cameraProviderFuture = ProcessCameraProvider.getInstance(getApplicationContext());
 
@@ -516,7 +486,11 @@ public class MainActivity extends AppCompatActivity {
         SensorManager.getOrientation(rotationMatrix, mOrientationAngles);
 
         // "mOrientationAngles" now has up-to-date information.
-        currentOrientation = (float) (180/Math.PI)*mOrientationAngles[0];
+        currentOrientation = (float) Math.toDegrees(mOrientationAngles[0]);
+        float pitch = (float) Math.toDegrees(mOrientationAngles[1]);
+        float roll = (float) Math.toDegrees(mOrientationAngles[2]);
+
+        Log.d("AR Navi", currentLocation + ", " + pitch + ", " + roll);
 
         float arrowOrientation = getArrowOrientation();
         float angle = arrowOrientation;
