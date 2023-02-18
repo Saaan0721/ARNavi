@@ -574,9 +574,9 @@ public class MainActivity extends AppCompatActivity {
         } else {
             manager.setOnLocationChangeListener(nonTrackingLocationListener);
 //            manager.closeGps();
-
 //            manager.setOnLocationChangeListener(null);
 
+            setCurrentIcon();
             tMapView.setTrackingMode(false);
             tMapView.setSightVisible(false);
             tMapView.setCompassModeFix(false);
@@ -606,11 +606,28 @@ public class MainActivity extends AppCompatActivity {
         public void onLocationChange(Location location) {
             if (location != null) {
                 currentLocation = location;
-
+                if (tMapView.getMarkerItemFromId("current") != null) {
+                    Log.d("AR Navi", String.valueOf(tMapView.getMarkerItemFromId("current")));
+                    tMapView.removeTMapPOIItem("current");
+                }
+                if (!tMapView.isTrackingMode()) {
+                    setCurrentIcon();
+                }
 //                tMapView.setCenterPoint(location.getLatitude(), location.getLongitude(), true);
             }
         }
     };
+
+    private void setCurrentIcon() {
+
+        TMapMarkerItem tMapMarkerItem = new TMapMarkerItem();
+        tMapMarkerItem.setId("current");
+        tMapMarkerItem.setTMapPoint(currentLocation.getLatitude(), currentLocation.getLongitude());
+        Bitmap current_icon = BitmapFactory.decodeResource(getResources(), R.drawable.current_icon);
+        current_icon = Bitmap.createScaledBitmap(current_icon, 110, 110, true);
+        tMapMarkerItem.setIcon(current_icon);
+        tMapView.addTMapMarkerItem(tMapMarkerItem);
+    }
 
     private void crossfade() {
         mainLayout.setAlpha(0f);
